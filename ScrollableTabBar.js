@@ -84,7 +84,7 @@ const ScrollableTabBar = React.createClass({
     newScrollX -= this.props.scrollOffset;
     newScrollX = newScrollX >= 0 ? newScrollX : 0;
 
-    if (Platform === 'android') {
+    if (Platform.OS === 'android') {
       this._scrollView.scrollTo({x: newScrollX, y: 0, });
     } else {
       const rightBoundScroll = this._tabContainerMeasurements.width - this._containerMeasurements.width;
@@ -168,7 +168,6 @@ const ScrollableTabBar = React.createClass({
         horizontal={true}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
-        style={styles.scrollableContainer}
         directionalLockEnabled={true}
         scrollEventThrottle={16}
         keyboardShouldPersistTaps
@@ -222,7 +221,5 @@ const styles = StyleSheet.create({
   tabs: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-  },
-  scrollableContainer: {
   },
 });

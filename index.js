@@ -35,6 +35,7 @@ const ScrollableTabView = React.createClass({
     style: View.propTypes.style,
     contentProps: PropTypes.object,
     scrollWithoutAnimation: PropTypes.bool,
+    locked: PropTypes.bool,
   },
 
   getDefaultProps() {
@@ -46,6 +47,7 @@ const ScrollableTabView = React.createClass({
       onScroll: () => {},
       contentProps: {},
       scrollWithoutAnimation: false,
+      locked: false,
     };
   },
 
@@ -88,7 +90,7 @@ const ScrollableTabView = React.createClass({
     if (this.props.renderTabBar === false) {
       return null;
     } else if (this.props.renderTabBar) {
-      return this.props.renderTabBar(props);
+      return React.cloneElement(this.props.renderTabBar(props), props);
     } else {
       return <DefaultTabBar {...props} />;
     }
