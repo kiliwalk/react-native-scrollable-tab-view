@@ -71,10 +71,10 @@ var App = React.createClass({
 
 ## Props
 
-- **`renderTabBar`** _(Function:ReactComponent)_ - should return a component to use as
+- **`renderTabBar`** _(Function:ReactComponent)_ - accept 1 argument `props` and should return a component to use as
   the tab bar. The component has `goToPage`, `tabs`, `activeTab` and
   `ref` added to the props, and should implement `setAnimationValue` to
-  be able to animate itself along with the tab content.
+  be able to animate itself along with the tab content. You can manually pass the `props` to the TabBar component.
 - **`tabBarPosition`** _(String)_ Defaults to `"top"`.
   - `"bottom"` to position the tab bar below content.
   - `"overlayTop"` or `"overlayBottom"` for a semitransparent tab bar that overlays content. Custom tab bars must consume a style prop on their outer element to support this feature: `style={this.props.style}`.
@@ -91,6 +91,12 @@ var App = React.createClass({
 - **`tabBarTextStyle`** _(Object)_ - Additional styles to the tab bar's text. Example: `{fontFamily: 'Roboto', fontSize: 15}`
 - **`style`** _([View.propTypes.style](https://facebook.github.io/react-native/docs/view.html#style))_
 - **`contentProps`** _(Object)_ - props that are applied to root `ScrollView`/`ViewPagerAndroid`. Note that overriding defaults set by the library may break functionality; see the source for details.
+- **`scrollWithoutAnimation`** _(Bool)_ - on tab press change tab without animation.
+
+## Contribution
+**Issues** are welcome. Please add a screenshot of bug and code snippet. Quickest way to solve issue is to reproduce it on one of the examples.
+
+**Pull requests** are welcome. If you want to change API or making something big better to create issue and discuss it first. Before submiting PR please run ```eslint .``` Also all eslint fixes are welcome.
 
 ---
 
