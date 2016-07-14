@@ -39,6 +39,7 @@ const ScrollableTabView = React.createClass({
     contentProps: PropTypes.object,
     scrollWithoutAnimation: PropTypes.bool,
     locked: PropTypes.bool,
+    prerenderingSiblingsNumber: PropTypes.number
   },
 
   getDefaultProps() {
@@ -51,6 +52,7 @@ const ScrollableTabView = React.createClass({
       contentProps: {},
       scrollWithoutAnimation: false,
       locked: false,
+      prerenderingSiblingsNumber: 0
     };
   },
 
@@ -59,7 +61,7 @@ const ScrollableTabView = React.createClass({
       currentPage: this.props.initialPage,
       scrollValue: new Animated.Value(this.props.initialPage),
       containerWidth: Dimensions.get('window').width,
-      sceneKeys: this.updateSceneKeys(this.props.children, [], this.props.initialPage),
+      sceneKeys: this.newSceneKeys({ currentPage: this.props.initialPage, }),
     };
   },
 
@@ -67,11 +69,13 @@ const ScrollableTabView = React.createClass({
     if (props.page >= 0 && props.page !== this.state.currentPage) {
       this.goToPage(props.page);
     }
+
+    if (props.children !== this.props.children) {
+      this.updateSceneKeys({ page: this.state.currentPage, children: props.children, });
+    }
   },
 
   goToPage(pageNumber) {
-    this.props.onChangeTab({ i: pageNumber, ref: this._children()[pageNumber], });
-
     if (Platform.OS === 'ios') {
       const offset = pageNumber * this.state.containerWidth;
       if (this.scrollView) {
@@ -87,12 +91,11 @@ const ScrollableTabView = React.createClass({
       }
     }
 
-    if (this.props.children.length !== this.state.sceneKeys.length) {
-      let newKeys = this.updateSceneKeys(this.props.children, this.state.sceneKeys, pageNumber);
-      this.setState({currentPage: pageNumber, sceneKeys: newKeys, });
-    } else {
-      this.setState({currentPage: pageNumber, });
-    }
+    const currentPage = this.state.currentPage;
+    this.updateSceneKeys({
+      page: pageNumber,
+      callback: this._onChangeTab.bind(this, currentPage, pageNumber),
+    });
   },
 
   renderTabBar(props) {
@@ -105,15 +108,27 @@ const ScrollableTabView = React.createClass({
     }
   },
 
-  updateSceneKeys(children, sceneKeys = [], currentPage) {
+  updateSceneKeys({ page, children = this.props.children, callback = () => {}, }) {
+    let newKeys = this.newSceneKeys({ previousKeys: this.state.sceneKeys, currentPage: page, children, });
+    this.setState({currentPage: page, sceneKeys: newKeys, }, callback);
+  },
+
+  newSceneKeys({ previousKeys = [], currentPage = 0, children = this.props.children, }) {
     let newKeys = [];
-    children.forEach((child, idx) => {
+    this._children(children).forEach((child, idx) => {
       let key = this._makeSceneKey(child, idx);
-      if (this._keyExists(sceneKeys, key) || currentPage === idx) {
+      if (this._keyExists(previousKeys, key) ||
+        this._shouldRenderSceneKey(idx, currentPage)) {
         newKeys.push(key);
       }
     });
     return newKeys;
+  },
+
+  _shouldRenderSceneKey(idx, currentPageKey) {
+    let numOfSibling = this.props.prerenderingSiblingsNumber;
+    return (idx < (currentPageKey + numOfSibling + 1) &&
+      idx > (currentPageKey - numOfSibling - 1));
   },
 
   _keyExists(sceneKeys, key) {
@@ -131,8 +146,6 @@ const ScrollableTabView = React.createClass({
         horizontal
         pagingEnabled
         automaticallyAdjustContentInsets={false}
-        style={styles.scrollableContentIOS}
-        contentContainerStyle={styles.scrollableContentContainerIOS}
         contentOffset={{ x: this.props.initialPage * this.state.containerWidth, }}
         ref={(scrollView) => { this.scrollView = scrollView; }}
         onScroll={(e) => {
@@ -190,7 +203,7 @@ const ScrollableTabView = React.createClass({
       let key = this._makeSceneKey(child, idx);
       return <SceneComponent
         key={child.key}
-        selected={(this.state.currentPage === idx)}
+        shouldUpdated={this._shouldRenderSceneKey(idx, this.state.currentPage)}
         style={{width: this.state.containerWidth, }}
       >
         {this._keyExists(this.state.sceneKeys, key) ? child : <View tabLabel={child.props.tabLabel}/>}
@@ -198,22 +211,25 @@ const ScrollableTabView = React.createClass({
     });
   },
 
-  _updateSelectedPage(currentPage) {
-    let localCurrentPage = currentPage;
-    if (typeof localCurrentPage === 'object') {
-      localCurrentPage = currentPage.nativeEvent.position;
+  _updateSelectedPage(nextPage) {
+    let localNextPage = nextPage;
+    if (typeof localNextPage === 'object') {
+      localNextPage = nextPage.nativeEvent.position;
     }
-    // scenekeys length and children length is same then no need to update the keys as all are stored by now
-    if (this.props.children.length !== this.state.sceneKeys.length) {
-      let newKeys = this.updateSceneKeys(this.props.children, this.state.sceneKeys, localCurrentPage);
-      this.setState({currentPage: localCurrentPage, sceneKeys: newKeys, }, () => {
-        this.props.onChangeTab({ i: localCurrentPage, ref: this._children()[localCurrentPage], });
-      });
-    } else {
-      this.setState({currentPage: localCurrentPage, }, () => {
-        this.props.onChangeTab({ i: localCurrentPage, ref: this._children()[localCurrentPage], });
-      });
-    }
+
+    const currentPage = this.state.currentPage;
+    this.updateSceneKeys({
+      page: localNextPage,
+      callback: this._onChangeTab.bind(this, currentPage, localNextPage),
+    });
+  },
+
+  _onChangeTab(prevPage, currentPage) {
+    this.props.onChangeTab({
+      i: currentPage,
+      ref: this._children()[currentPage],
+      from: prevPage,
+    });
   },
 
   _updateScrollValue(value) {
@@ -232,8 +248,8 @@ const ScrollableTabView = React.createClass({
     }
   },
 
-  _children() {
-    return React.Children.map(this.props.children, (child) => child);
+  _children(children = this.props.children) {
+    return React.Children.map(children, (child) => child);
   },
 
   render() {
@@ -283,12 +299,6 @@ module.exports = ScrollableTabView;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  scrollableContentContainerIOS: {
-    flex: 1,
-  },
-  scrollableContentIOS: {
-    flexDirection: 'column',
   },
   scrollableContentAndroid: {
     flex: 1,
